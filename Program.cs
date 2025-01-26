@@ -103,84 +103,50 @@ class Program
             var containerResponse = await cosmosDatabase.Database.CreateContainerIfNotExistsAsync(containerProperties).ConfigureAwait(false);
             var container = containerResponse.Container;
 
-            // Create phirecords entries
-            var phiRecords = CreatePHIRecords().ToList();
+            // Retrieve LANGUAGE_ENDPOINT and LANGUAGE_KEY from environment variables.
+            string languageEndpoint = Environment.GetEnvironmentVariable("LANGUAGE_ENDPOINT");
+            string languageKey = Environment.GetEnvironmentVariable("LANGUAGE_KEY");
 
-            // Upsert the entries into the collection.
-            var tasks = phiRecords.Select(async x =>
+            // Call the language endpoint
+            using (var httpClient = new HttpClient())
             {
-                // Log the PHIRecord as JSON
-                // Console.WriteLine($"Upserting PHIRecord: {System.Text.Json.JsonSerializer.Serialize(x)}");
-                
-                // Validate required fields
-                if (string.IsNullOrEmpty(x.id) || string.IsNullOrEmpty(x.FileName) || string.IsNullOrEmpty(x.Operation))
+                httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", languageKey);
+                string payloadJson = File.ReadAllText("lang.json");
+                var content = new StringContent(
+                    payloadJson,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+                var languageResponse = await httpClient.PostAsync(
+                    $"{languageEndpoint}/language/:analyze-text?api-version=2022-05-01",
+                    content
+                );
+                if (!languageResponse.IsSuccessStatusCode)
                 {
-                    Console.WriteLine($"Invalid PHIRecord detected: {System.Text.Json.JsonSerializer.Serialize(x)}");
-                    throw new ArgumentException("PHIRecord contains invalid or missing fields.");
-                }
-
-                // Validate Partition Key
-                if (string.IsNullOrEmpty(x.id))
-                {
-                    Console.WriteLine($"Partition key 'id' is missing for PHIRecord: {System.Text.Json.JsonSerializer.Serialize(x)}");
-                    throw new ArgumentException("Partition key 'id' is required.");
-                }
-
-                int maxRetries = 3;
-                int attempt = 0;
-                while (attempt < maxRetries)
-                {
-                    try
+                    logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
+                } else {
+                    // Get the response content
+                    var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
+                    logger.LogInformation($"Language response: {languageResponseContent}"); 
+                    var doc = System.Text.Json.JsonDocument.Parse(languageResponseContent);
+                    var entities = new List<PHIRecord>();
+                    foreach (var docElement in doc.RootElement
+                        .GetProperty("results")
+                        .GetProperty("documents")
+                        .EnumerateArray())
                     {
-                        Console.WriteLine($"id: '{x.id}' file:'{x.FileName}' operation:'{x.Operation}' fieldname:'{x.FieldName}' fieldtype:'{x.FieldType}'");
-                        await container.UpsertItemAsync<PHIRecord>(item: x);
-                        return x.id;
-                    }
-                    catch (CosmosException cosmosEx) when (cosmosEx.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                    {
-                        Console.WriteLine($"BadRequest error upserting entry '{x.id}': {cosmosEx.Message}");
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        attempt++;
-                        Console.WriteLine($"Error upserting entry '{x.id}': {ex.Message} (Attempt {attempt}/{maxRetries})");
-                        if (attempt >= maxRetries)
+                        foreach (var entity in docElement.GetProperty("entities").EnumerateArray())
                         {
-                            Console.WriteLine($"Failed to upsert entry '{x.id}' after {maxRetries} attempts.");
-                            throw; //return null; // or handle accordingly
+                            // string text = entity.GetProperty("text").GetString();
+                            string category = entity.GetProperty("category").GetString();
+                            // Create a PHIRecord with category
+                            var record = new PHIRecord("LanguageSubscription", "LanguageRG", "LanguageStorage", "Container", "FromLanguage", "insert", category, category);
+                            entities.Add(record);
                         }
-                        await Task.Delay(1000); // Wait before retrying
                     }
+                    await Task.WhenAll(entities.Select(e => container.UpsertItemAsync(e)));
                 }
-                return null;
-            });
-            await Task.WhenAll(tasks);
-
-            // // Retrieve LANGUAGE_ENDPOINT and LANGUAGE_KEY from environment variables.
-            // string languageEndpoint = Environment.GetEnvironmentVariable("LANGUAGE_ENDPOINT");
-            // string languageKey = Environment.GetEnvironmentVariable("LANGUAGE_KEY");
-            // using (var httpClient = new HttpClient())
-            // {
-            //     httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", languageKey);
-            //     string payloadJson = File.ReadAllText("lang.json");
-            //     var content = new StringContent(
-            //         payloadJson,
-            //         System.Text.Encoding.UTF8,
-            //         "application/json"
-            //     );
-            //     var languageResponse = await httpClient.PostAsync(
-            //         $"{languageEndpoint}/language/:analyze-text?api-version=2022-05-01",
-            //         content
-            //     );
-            //     if (!languageResponse.IsSuccessStatusCode)
-            //     {
-            //         logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
-            //     } else {
-            //         var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
-            //         logger.LogInformation($"Language response: {languageResponseContent}"); 
-            //     }
-            // }
+            }
 
         }
         catch (Exception ex)
