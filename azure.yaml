@@ -10,25 +10,9 @@ hooks:
         continueOnError: false
         interactive: true
         run: ./infra/azd-hooks/preprovision.ps1
-    posix:
-        shell: sh
-        continueOnError: false
-        interactive: true
-        run: chmod +x ./infra/azd-hooks/preprovision.sh
   postprovision:
     windows:
-      run: |
-        $userSecrets = @{
-        }
-        $userSecrets | ConvertTo-Json | dotnet user-secrets set --project ./Project.csproj
-      shell: pwsh
-      continueOnError: false
-      interactive: true
-    posix:
-      run: |
-        $userSecrets = @{
-        }
-        echo $userSecrets | dotnet user-secrets set --project ./Project.csproj
-      shell: sh
-      continueOnError: false
-      interactive: true
+        shell: pwsh
+        continueOnError: false
+        interactive: true
+        run: ./infra/azd-hooks/postprovision.ps1

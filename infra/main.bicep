@@ -7,8 +7,12 @@ param environmentName string
 
 @minLength(1)
 @allowed([
+  'canadacentral'
+  'centralus'
   'eastus'
   'eastus2'
+  'northcentralus'
+  'southcentralus'
   'westus'
   'westus2'
   'westus3'
@@ -140,9 +144,9 @@ module functionApp 'core/function-app.bicep' = {
   name: 'functionApp'
   scope: resourceGroup
   params: {
-    storageAccountName: storageAccountName
+    storageAccountId: storage.outputs.id
     functionAppName: functionAppName
-    appServicePlanName: appServicePlanName
+    appServicePlanName: !empty(appServicePlanName) ? appServicePlanName : '${abbrs.appServicePlans}${resourceToken}'
   }
 }
 

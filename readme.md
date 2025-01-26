@@ -13,6 +13,8 @@ azd auth login
 azd up
 ```
 
+# Function App Development
+
 # Local Development
 
 Copy sample.env to .env.

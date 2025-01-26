@@ -1,18 +1,24 @@
 param functionAppName string = 'defaultFunctionAppName'
 param storageAccountName string = 'defaultStorageName'
 param appServicePlanName string = 'defaultAppServicePlan'
+param location string = resourceGroup().location
+param tags object = {}
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2020-12-01' = {
+param kind string = ''
+param reserved bool = true
+param sku object = { name: 'P0v3' }
+
+param storageAccountId string
+
+resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: appServicePlanName
-  location: resourceGroup().location
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+  location: location
+  tags: tags
+  sku: sku
+  kind: kind
+  properties: {
+    reserved: reserved
   }
-}
-
-resource storage 'Microsoft.Storage/storageAccounts@2021-09-01' existing = {
-  name: storageAccountName
 }
 
 resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
@@ -25,7 +31,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};AccountKey=${storage.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2021-04-01').keys[0].value}'
         }
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
@@ -39,3 +45,6 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
     }
   }
 }
+
+output id string = appServicePlan.id
+output name string = appServicePlan.name
