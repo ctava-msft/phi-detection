@@ -1,17 +1,9 @@
 using Azure;
-using Azure.AI.OpenAI;
 using Azure.Identity;
-using Azure.Search.Documents.Indexes;
-using Azure.Search.Documents.Indexes.Models;
 using DotNetEnv;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.AzureAISearch;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel.Embeddings;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,23 +15,10 @@ using System.IO;
 using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Timer;
+using Microsoft.Azure.WebJobs.Extensions;
 
 public static class PhiDetectionFunction
 {
-    private static readonly ILogger Logger;
-
-    static PhiDetectionFunction()
-    {
-        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder
-                .AddConsole()
-                .SetMinimumLevel(LogLevel.Debug);
-        });
-
-        Logger = loggerFactory.CreateLogger<PhiDetectionFunction>();
-    }
 
     [FunctionName("PhiDetection")]
     public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
@@ -48,6 +27,15 @@ public static class PhiDetectionFunction
         {
             // Load the .env file
             Env.Load();
+
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConsole()
+                    .SetMinimumLevel(LogLevel.Debug);
+            });
+
+            ILogger Logger = loggerFactory.CreateLogger("PhiDetectionFunction");
 
             // Load Endpoints from config file
             string cosmosEndpoint = Environment.GetEnvironmentVariable("COSMOSDB_ENDPOINT");
@@ -189,18 +177,5 @@ public static class PhiDetectionFunction
             FieldType = fieldType;
         }
 
-    }
-
-    /// <summary>
-    /// Create some sample PHI records.
-    /// </summary>
-    /// <returns>A list of sample PHI records.</returns>
-    private static IEnumerable<PHIRecord> CreatePHIRecords()
-    {
-        yield return new PHIRecord("YourSubscription", "YourResourceGroup", "YourStorageAreaName", "YourStorageAreaContainer", "YourFileName", "insert", "Name", "A");
-    
-        yield return new PHIRecord("YourSubscription", "YourResourceGroup", "YourStorageAreaName", "YourStorageAreaContainer", "YourFileName", "update", "Email", "F");
-    
-        yield return new PHIRecord("YourSubscription", "YourResourceGroup", "YourStorageAreaName", "YourStorageAreaContainer", "YourFileName", "delete", "IP Address", "O");
     }
 }
