@@ -292,6 +292,9 @@
     },
     "azureContainerAppsWorkloadProfile": {
       "value": "${AZURE_CONTAINER_APPS_WORKLOAD_PROFILE=Consumption}"
+    },
+    "functionAppName": {
+      "value": "PHI-DETECTION"
     }
   }
 }

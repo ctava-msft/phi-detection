@@ -9,7 +9,7 @@ resource languageService 'Microsoft.CognitiveServices/accounts@2022-12-01' = {
   location: location
   kind: 'TextAnalytics'
   sku: {
-    name: 'S0'
+    name: 'F0'
   }
   identity: {
     type: 'UserAssigned'

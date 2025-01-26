@@ -22,28 +22,30 @@ using System.Net.Http;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Timer;
 
-// Program class    
-[RequiresPreviewFeatures]
-class Program
+public static class PhiDetectionFunction
 {
+    private static readonly ILogger Logger;
 
-    // Main method
-    static async Task Main(string[] args)
+    static PhiDetectionFunction()
+    {
+        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder
+                .AddConsole()
+                .SetMinimumLevel(LogLevel.Debug);
+        });
+
+        Logger = loggerFactory.CreateLogger<PhiDetectionFunction>();
+    }
+
+    [FunctionName("PhiDetection")]
+    public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
     {
         try
         {
-
-            // Create a LoggerFactory and Logger
-            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder
-                    .AddConsole()
-                    .SetMinimumLevel(LogLevel.Debug);
-            });
-
-            ILogger logger = loggerFactory.CreateLogger<Program>();
-
             // Load the .env file
             Env.Load();
 
@@ -123,11 +125,11 @@ class Program
                 );
                 if (!languageResponse.IsSuccessStatusCode)
                 {
-                    logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
+                    Logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
                 } else {
                     // Get the response content
                     var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
-                    logger.LogInformation($"Language response: {languageResponseContent}"); 
+                    Logger.LogInformation($"Language response: {languageResponseContent}"); 
                     var doc = System.Text.Json.JsonDocument.Parse(languageResponseContent);
                     var entities = new List<PHIRecord>();
                     foreach (var docElement in doc.RootElement

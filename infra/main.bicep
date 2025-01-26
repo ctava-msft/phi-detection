@@ -44,11 +44,15 @@ param publicNetworkAccess string = 'Enabled'
 @description('Use Application Insights for monitoring and performance tracing')
 param useApplicationInsights bool = false
 
-param storageAccountName string = '' // Set in main.parameters.json
+param storageAccountName string // Set in main.parameters.json
 param storageContainerName string = 'content'
+param functionAppContainerName string = 'functionapp'
 param storageSkuName string // Set in main.parameters.json
 
 param cosmosdbName string = '' // Set in main.parameters.json
+
+param functionAppName string = '' // Set in main.parameters.json
+param appServicePlanName string = '' // Set in main.parameters.json
 
 // modules
 
@@ -113,6 +117,10 @@ module storage 'core/storage/storage-account.bicep' = {
         name: storageContainerName
         publicAccess: 'None'
       }
+      {
+        name: functionAppContainerName
+        publicAccess: 'None'
+      }
     ]
   }
 }
@@ -128,16 +136,26 @@ module database 'core/database/database.bicep' = {
   }
 }
 
-module languageService 'core/language-service.bicep' = {
-  name: 'languageService'
+module functionApp 'core/function-app.bicep' = {
+  name: 'functionApp'
   scope: resourceGroup
   params: {
-    languageServiceName: '${abbrs.cognitiveServicesLanguage}${resourceToken}'
-    location: location
-    tags: tags
-    userManagedIdentityId: identity.outputs.principalId
+    storageAccountName: storageAccountName
+    functionAppName: functionAppName
+    appServicePlanName: appServicePlanName
   }
 }
+
+// module languageService 'core/language-service.bicep' = {
+//   name: 'languageService'
+//   scope: resourceGroup
+//   params: {
+//     languageServiceName: '${abbrs.cognitiveServicesLanguage}${resourceToken}'
+//     location: location
+//     tags: tags
+//     userManagedIdentityId: identity.outputs.principalId
+//   }
+// }
 
 // Database outputs
 output AZURE_COSMOS_DB_ENDPOINT string = database.outputs.endpoint
