@@ -147,6 +147,7 @@ module functionApp 'core/function-app.bicep' = {
     storageAccountId: storage.outputs.id
     functionAppName: functionAppName
     appServicePlanName: !empty(appServicePlanName) ? appServicePlanName : '${abbrs.appServicePlans}${resourceToken}'
+    userAssignedIdentityResourceId: identity.outputs.resourceId
   }
 }
 

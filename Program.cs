@@ -16,6 +16,9 @@ using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.AspNetCore.Http;
 
 public static class PhiDetectionFunction
 {
@@ -144,6 +147,12 @@ public static class PhiDetectionFunction
             Console.WriteLine($"An error occurred: {ex.Message}");
             Console.WriteLine($"Stack Trace: {ex.StackTrace}");
         }
+    }
+
+    [FunctionName("HealthCheck")]
+    public static IActionResult HealthCheck([HttpTrigger(AuthorizationLevel.Function, "get", Route = "health")] HttpRequest req)
+    {
+        return new OkObjectResult("Healthy");
     }
 
     /// <summary>

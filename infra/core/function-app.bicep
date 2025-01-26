@@ -9,6 +9,7 @@ param reserved bool = true
 param sku object = { name: 'P0v3' }
 
 param storageAccountId string
+param userAssignedIdentityResourceId string
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: appServicePlanName
@@ -25,6 +26,12 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
   name: functionAppName
   location: resourceGroup().location
   kind: 'functionapp'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userAssignedIdentityResourceId}': {}
+    }
+  }
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
@@ -47,6 +54,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
         }
       ]
       alwaysOn: true
+      healthCheckPath: '/api/health'
     }
     httpsOnly: true
   }
