@@ -3,8 +3,8 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <UserSecretsId>f16de4bf-1677-44b6-9a18-08b854673b8e</UserSecretsId>
-    <EnablePreviewFeatures>true</EnablePreviewFeatures>
+    <EnablePreviewFeatures>false</EnablePreviewFeatures>
+    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <NoWarn>$(NoWarn);SKEXP0001,SKEXP0010,SKEXP0020,NU1902,NU1903,CS5001</NoWarn>
+    <NoWarn>$(NoWarn);SKEXP0001,SKEXP0010,SKEXP0020,NU1902,NU1903</NoWarn>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
   </PropertyGroup>
