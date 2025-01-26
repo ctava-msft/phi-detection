@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: phi-detection
+metadata:
+  template: azd-init@1.11.0
+hooks:
+  preprovision:
+    windows:
+        shell: pwsh
+        continueOnError: false
+        interactive: true
+        run: ./infra/azd-hooks/preprovision.ps1
+    posix:
+        shell: sh
+        continueOnError: false
+        interactive: true
+        run: chmod +x ./infra/azd-hooks/preprovision.sh
+  postprovision:
+    windows:
+      run: |
+        $userSecrets = @{
+        }
+        $userSecrets | ConvertTo-Json | dotnet user-secrets set --project ./Project.csproj
+      shell: pwsh
+      continueOnError: false
+      interactive: true
+    posix:
+      run: |
+        $userSecrets = @{
+        }
+        echo $userSecrets | dotnet user-secrets set --project ./Project.csproj
+      shell: sh
+      continueOnError: false
+      interactive: true

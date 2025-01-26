@@ -1,0 +1,15 @@
+{
+    "kind": "PiiEntityRecognition",
+    "parameters": {
+        "modelVersion": "latest"
+    },
+    "analysisInput":{
+        "documents":[
+            {
+                "id":"1",
+                "language": "en",
+                "text": "Call our office at 312-555-1234, charge this credit card: 5555 5555 5555 4444 3-digit CVV: 523 that expires on 08/29 or send an email to support@contoso.com"
+            }
+        ]
+    }
+}

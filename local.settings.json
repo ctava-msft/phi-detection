@@ -1,0 +1,10 @@
+
+{
+    "IsEncrypted": false,
+    "Values": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+        "COSMOSDB_ENDPOINT": "https://cosmos-tqzqvek3clzau.documents.azure.com",
+        "COSMOSDB_DBNAME": "cosmoscopilotdb"
+    }
+}
