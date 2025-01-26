@@ -22,6 +22,9 @@ using Microsoft.AspNetCore.Http;
 
 public static class PhiDetectionFunction
 {
+    private static DefaultAzureCredential credentials = new DefaultAzureCredential();
+    private static CosmosClient cosmosClient;
+    private static DateTime tokenExpiryTime = DateTime.MinValue;
 
     [FunctionName("PhiDetection")]
     public static async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
@@ -46,19 +49,18 @@ public static class PhiDetectionFunction
             // Load Cosmos DB name from config file
             string cosmosDatabaseName = Environment.GetEnvironmentVariable("COSMOSDB_DBNAME");
 
-            // Load Credentials
-            var credentials = new DefaultAzureCredential();
-
-            // Cosmos DB Client Options
-            CosmosClientOptions cosmosClientOptions = new CosmosClientOptions
+            // Refresh credentials and CosmosClient if token is about to expire
+            if (DateTime.UtcNow >= tokenExpiryTime)
             {
-                ConnectionMode = ConnectionMode.Direct,
-                ConsistencyLevel = ConsistencyLevel.Session,
-                ApplicationName = "YourAppName"
-            };
-
-            // Create a search index client.
-            var cosmosClient = new CosmosClient(cosmosEndpoint, credentials, cosmosClientOptions);
+                credentials = new DefaultAzureCredential();
+                cosmosClient = new CosmosClient(cosmosEndpoint, credentials, new CosmosClientOptions
+                {
+                    ConnectionMode = ConnectionMode.Direct,
+                    ConsistencyLevel = ConsistencyLevel.Session,
+                    ApplicationName = "YourAppName"
+                });
+                tokenExpiryTime = DateTime.UtcNow.AddMinutes(55); // Set token expiry time to 55 minutes from now
+            }
 
             // Ensure the Cosmos DB database exists
             var cosmosDatabase = await cosmosClient.CreateDatabaseIfNotExistsAsync(cosmosDatabaseName).ConfigureAwait(false);
@@ -81,10 +83,6 @@ public static class PhiDetectionFunction
             indexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/FieldName/?" });
             indexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/FieldType/?" });
             indexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/_etag/?" });
-
-            // // Optional: Log the indexing policy for debugging
-            // Console.WriteLine("Indexing Policy:");
-            // Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(indexingPolicy));
 
             // Create container properties with the custom indexing policy
             var containerProperties = new ContainerProperties("phirecords-v9", "/id")
@@ -161,7 +159,8 @@ public static class PhiDetectionFunction
     /// <remarks>
     /// </remarks>
     public record PHIRecord
-    {   public string id { get; set; }
+    {   
+        public string id { get; set; }
         public string Subscription { get; set; }
         public string ResourceGroup { get; set; }
         public string StorageAreaName { get; set; }

@@ -52,9 +52,25 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: '1'
         }
+        {
+          name: 'COSMOSDB_ENDPOINT'
+          value: 'https://cosmos-tqzqvek3clzau.documents.azure.com'
+        }
+        {
+          name: 'COSMOSDB_DBNAME'
+          value: 'cosmoscopilotdb'
+        }
+        {
+          name: 'LANGUAGE_ENDPOINT'
+          value: 'https://cog-ta-tqzqvek3clzau.cognitiveservices.azure.com'
+        }
+        {
+          name: 'LANGUAGE_KEY'
+          value: 'Cx7C9uJT3mdCKCt2otzhYUWvjgcszaKlINp38OvmMtID4HjOJRNmJQQJ99BAACHYHv6XJ3w3AAAaACOGzeOQ'
+        }
       ]
       alwaysOn: true
-      healthCheckPath: '/api/health'
+      healthCheckPath: '/health'
     }
     httpsOnly: true
   }
