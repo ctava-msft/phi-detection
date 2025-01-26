@@ -35,7 +35,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
         }
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'DOTNET|8.0'
+          value: 'DOTNET'
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
@@ -48,6 +48,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
       ]
       alwaysOn: true
     }
+    httpsOnly: true
   }
 }
 
