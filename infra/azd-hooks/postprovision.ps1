@@ -9,7 +9,7 @@ dotnet build $projectPath --configuration Release
 
 # Publish the project
 dotnet publish $projectPath --configuration Release --output ./publish
-Compress-Archive -Path ./publish/* -DestinationPath ./publish.zip
+Compress-Archive -Path ./publish/* -DestinationPath ./publish.zip -Force
 
 # Deploy to Azure Function App
 az functionapp deployment source config-zip `
