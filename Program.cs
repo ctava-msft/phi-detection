@@ -21,9 +21,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Runtime.Versioning;
 using System.Threading;
+using System.Net.Http;
+using System.IO;
 
-
-// Program class
+// Program class    
 [RequiresPreviewFeatures]
 class Program
 {
@@ -71,50 +72,50 @@ class Program
             // Ensure the Cosmos DB database exists
             var cosmosDatabase = await cosmosClient.CreateDatabaseIfNotExistsAsync(cosmosDatabaseName).ConfigureAwait(false);
 
-            // Create a CosmosDBNoSQL vector store.
-            var vectorStore = new AzureCosmosDBNoSQLVectorStore(cosmosDatabase);
+            // // Create a CosmosDBNoSQL vector store.
+            // var vectorStore = new AzureCosmosDBNoSQLVectorStore(cosmosDatabase);
 
-            // Get and create collection if it doesn't exist.
-            var collectionName = "phirecords-v1";
-            var collection = vectorStore.GetCollection<string, PHIRecord>(collectionName);
-            await collection.CreateCollectionIfNotExistsAsync();
+            // // Get and create collection if it doesn't exist.
+            // var collectionName = "phirecords-v1";
+            // var collection = vectorStore.GetCollection<string, PHIRecord>(collectionName);
+            // await collection.CreateCollectionIfNotExistsAsync();
 
-            // Create phirecords entries
-            var phiRecords = CreatePHIRecords().ToList();
-            var tasks = phiRecords.Select(entry => Task.Run(() =>
-            {
-                Console.WriteLine($"entry: '{entry.Key}' '{entry.Subscription}' '{entry.ResourceGroup}'");
-            }));
-            await Task.WhenAll(tasks);
+            // // Create phirecords entries
+            // var phiRecords = CreatePHIRecords().ToList();
+            // var tasks = phiRecords.Select(entry => Task.Run(() =>
+            // {
+            //     Console.WriteLine($"entry: '{entry.Key}' '{entry.Subscription}' '{entry.ResourceGroup}'");
+            // }));
+            // await Task.WhenAll(tasks);
 
-            // Upsert the phiRecords into the collection and return their keys.
-            var upsertedKeysTasks = phiRecords.Select(async x =>
-            {
-                int maxRetries = 5;
-                int attempt = 0;
-                while (attempt < maxRetries)
-                {
-                    try
-                    {
-                        return await collection.UpsertAsync(x);
-                    }
-                    catch (Exception ex)
-                    {
-                        attempt++;
-                        Console.WriteLine($"Error upserting entry '{x.Key}': {ex.Message} (Attempt {attempt}/{maxRetries})");
-                        if (attempt >= maxRetries)
-                        {
-                            Console.WriteLine($"Failed to upsert entry '{x.Key}' after {maxRetries} attempts.");
-                            return null; // or handle accordingly
-                        }
-                        // Use exponential backoff with a maximum delay cap
-                        var delay = Math.Min(1000 * (int)Math.Pow(2, attempt), 8000);
-                        await Task.Delay(delay);
-                    }
-                }
-                return null;
-            });
-            var upsertedKeys = await Task.WhenAll(upsertedKeysTasks);
+            // // Upsert the phiRecords into the collection and return their keys.
+            // var upsertedKeysTasks = phiRecords.Select(async x =>
+            // {
+            //     int maxRetries = 5;
+            //     int attempt = 0;
+            //     while (attempt < maxRetries)
+            //     {
+            //         try
+            //         {
+            //             return await collection.UpsertAsync(x);
+            //         }
+            //         catch (Exception ex)
+            //         {
+            //             attempt++;
+            //             Console.WriteLine($"Error upserting entry '{x.Key}': {ex.Message} (Attempt {attempt}/{maxRetries})");
+            //             if (attempt >= maxRetries)
+            //             {
+            //                 Console.WriteLine($"Failed to upsert entry '{x.Key}' after {maxRetries} attempts.");
+            //                 return null; // or handle accordingly
+            //             }
+            //             // Use exponential backoff with a maximum delay cap
+            //             var delay = Math.Min(1000 * (int)Math.Pow(2, attempt), 8000);
+            //             await Task.Delay(delay);
+            //         }
+            //     }
+            //     return null;
+            // });
+            // var upsertedKeys = await Task.WhenAll(upsertedKeysTasks);
 
             // Retrieve LANGUAGE_ENDPOINT and LANGUAGE_KEY from environment variables.
             string languageEndpoint = Environment.GetEnvironmentVariable("LANGUAGE_ENDPOINT");
@@ -122,9 +123,9 @@ class Program
             using (var httpClient = new HttpClient())
             {
                 httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", languageKey);
-                var payload = new { text = "reset" };
+                string payloadJson = File.ReadAllText("lang.json");
                 var content = new StringContent(
-                    System.Text.Json.JsonSerializer.Serialize(payload),
+                    payloadJson,
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
@@ -135,6 +136,9 @@ class Program
                 if (!languageResponse.IsSuccessStatusCode)
                 {
                     logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
+                } else {
+                    var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
+                    logger.LogInformation($"Language response: {languageResponseContent}"); 
                 }
             }
 
