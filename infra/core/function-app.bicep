@@ -38,10 +38,15 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
           value: 'dotnet'
         }
         {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
           value: '1'
         }
       ]
+      alwaysOn: true
     }
   }
 }
