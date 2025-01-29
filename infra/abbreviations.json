@@ -1,8 +1,9 @@
 {
-  "appServicePlans": "asp-",
-  "cosmosDbAccount": "cosmos",
-  "insightsComponents": "appi-",
-  "operationalInsightsWorkspaces": "log-",
+  "appServicePlans": "asp",
+  "cosmosDatabases": "cos",
+  "functionApps": "fa",
+  "insightsComponents": "appi",
+  "operationalInsightsWorkspaces": "log",
   "storageStorageAccounts": "st",
   "userAssignedIdentity": "ua-id"
 }

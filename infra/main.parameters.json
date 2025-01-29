@@ -9,13 +9,13 @@
       "value": "${AZURE_COSMOSDB_ACCOUNT}"
     },
     "cosmosdbName": {
-      "value": "cosmoscopilotdb"
+      "value": "${AZURE_COSMOSDB_DATABASE}"
     },
     "environmentName": {
       "value": "${AZURE_ENV_NAME}"
     },
     "functionAppName": {
-      "value": "PHI-DETECTION"
+      "value":  "${AZURE_FUNCTION_APP}"
     },
     "location": {
       "value": "${AZURE_LOCATION}"
@@ -27,7 +27,7 @@
       "value": "${AZURE_PRINCIPAL_ID}"
     },
     "publicNetworkAccess": {
-      "value": "${AZURE_PUBLIC_NETWORK_ACCESS=Disabled}"
+      "value": "${AZURE_PUBLIC_NETWORK_ACCESS}"
     },
     "storageAccountName": {
       "value": "${AZURE_STORAGE_ACCOUNT}"

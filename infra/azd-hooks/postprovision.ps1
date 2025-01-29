@@ -5,7 +5,7 @@ $parameters = Get-Content -Raw -Path $parametersPath | ConvertFrom-Json
 
 $functionAppName = $parameters.parameters.functionAppName.value
 $environmentName = $parameters.parameters.environmentName.value
-$resourceGroup = "rg-$environmentName"
+$resourceGroup = $environmentName
 
 # Constants
 $projectPath = "./Project.csproj"

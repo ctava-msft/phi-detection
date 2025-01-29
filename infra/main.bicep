@@ -1,3 +1,5 @@
+// Params
+
 targetScope = 'subscription'
 
 @minLength(1)
@@ -35,7 +37,6 @@ param userAssignedIdentityName string = ''
 var principalType = 'User'
 param applicationInsightsName string = ''
 param logAnalyticsName string = ''
-param cosmosDbAccountName string = ''
 
 @allowed(['None', 'AzureServices'])
 @description('If allowedIp is set, whether azure services are allowed to bypass the storage and AI services firewall.')
@@ -50,12 +51,13 @@ param useApplicationInsights bool = false
 
 param storageAccountName string = 'defaultStorageName'
 param storageContainerName string = 'content'
-param functionAppContainerName string = 'functionapp'
 param storageSkuName string // Set in main.parameters.json
 
-param cosmosdbName string = '' // Set in main.parameters.json
+param cosmosDbAccountName string = '' // Set in main.parameters.json
+param cosmosDbDatabaseName string = '' // Set in main.parameters.json
 
-param functionAppName string = '' // Set in main.parameters.json
+var functionAppName = '${abbrs.functionApps}-${resourceToken}'
+param functionAppContainerName string = 'functionapp'
 param appServicePlanName string = '' // Set in main.parameters.json
 
 // modules
@@ -133,8 +135,8 @@ module database 'core/database/database.bicep' = {
   name: 'database'
   scope: resourceGroup
   params: {
-    databaseName: cosmosdbName
-    accountName: !empty(cosmosDbAccountName) ? cosmosDbAccountName : '${abbrs.cosmosDbAccount}-${resourceToken}'
+    databaseName: !empty(cosmosDbDatabaseName) ? cosmosDbDatabaseName : '${abbrs.cosmosDatabases}-${resourceToken}'
+    accountName: !empty(cosmosDbAccountName) ? cosmosDbAccountName : '${abbrs.cosmosDatabases}-${resourceToken}'
     location: location
     tags: tags
   }
