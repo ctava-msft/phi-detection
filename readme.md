@@ -24,6 +24,12 @@ Fill in the following:
 - COSMOSDB_DBNAME=
 - LANGUAGE_ENDPOINT=
 
+To build the project run the following command(s):
+
+```
+dotnet build ./Project.csproj --configuration Release
+```
+
 Run the project using the following command(s):
 
 ```

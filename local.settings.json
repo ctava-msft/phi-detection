@@ -1,9 +1,8 @@
-
 {
     "IsEncrypted": false,
     "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+        "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=sttqzqvek3clzau;AccountKey=hqEjneVMsHGKNBRYI+bFd10+/MgDzup5ddOmxzu0+sYPgc+gI120bhwi31vzekwJsiD/qbLNOrmG+AStXthEtw==;EndpointSuffix=core.windows.net",
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
         "COSMOSDB_ENDPOINT": "https://cosmos-tqzqvek3clzau.documents.azure.com",
         "COSMOSDB_DBNAME": "cosmoscopilotdb",
         "LANGUAGE_ENDPOINT": "https://cog-ta-tqzqvek3clzau.cognitiveservices.azure.com",

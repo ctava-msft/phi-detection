@@ -48,7 +48,7 @@ param publicNetworkAccess string = 'Enabled'
 @description('Use Application Insights for monitoring and performance tracing')
 param useApplicationInsights bool = false
 
-param storageAccountName string // Set in main.parameters.json
+param storageAccountName string = 'defaultStorageName'
 param storageContainerName string = 'content'
 param functionAppContainerName string = 'functionapp'
 param storageSkuName string // Set in main.parameters.json

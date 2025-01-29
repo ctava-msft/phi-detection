@@ -1,8 +1,14 @@
 ## FunctionApp Deployment - Begin
+# Parse main.parameters.json to extract parameters
+$parametersPath = "../main.parameters.json"
+$parameters = Get-Content -Raw -Path $parametersPath | ConvertFrom-Json
+
+$functionAppName = $parameters.parameters.functionAppName.value
+$environmentName = $parameters.parameters.environmentName.value
+$resourceGroup = "rg-$environmentName"
+
 # Constants
 $projectPath = "./Project.csproj"
-$functionAppName = "PHI-DETECTION"
-$resourceGroup = "rg-phi-1"
 
 # Build the project
 dotnet build $projectPath --configuration Release

@@ -1,4 +1,4 @@
-param functionAppName string = 'defaultFunctionAppName'
+param functionAppName string = 'uniqueFunctionAppName-${uniqueString(resourceGroup().id)}'
 param storageAccountName string = 'defaultStorageName'
 param appServicePlanName string = 'defaultAppServicePlan'
 param location string = resourceGroup().location
@@ -42,7 +42,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
         }
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'DOTNET'
+          value: 'dotnet'
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
@@ -70,7 +70,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
         }
       ]
       alwaysOn: true
-      healthCheckPath: '/health'
+      healthCheckPath: '/api/health'
     }
     httpsOnly: true
   }
