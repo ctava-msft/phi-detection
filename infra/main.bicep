@@ -22,6 +22,10 @@ param environmentName string
 @description('Primary location for all resources.')
 param location string
 
+param functionAppName string
+param functionAppContainerName string = 'functionapp'
+param appServicePlanName string = '' // Set in main.parameters.json
+
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: environmentName
   location: location
@@ -56,10 +60,6 @@ param storageSkuName string // Set in main.parameters.json
 param cosmosDbAccountName string = '' // Set in main.parameters.json
 param cosmosDbDatabaseName string = '' // Set in main.parameters.json
 
-var functionAppName = '${abbrs.functionApps}-${resourceToken}'
-param functionAppContainerName string = 'functionapp'
-param appServicePlanName string = '' // Set in main.parameters.json
-
 // modules
 
 // Monitor application with Azure Monitor
@@ -83,7 +83,7 @@ module identity 'core/security/identity/identity.bicep' = {
   name: 'identity'
   scope: resourceGroup
   params: {
-    name: !empty(userAssignedIdentityName) ? userAssignedIdentityName : '${abbrs.userAssignedIdentity}-${resourceToken}'
+    name: !empty(userAssignedIdentityName) ? userAssignedIdentityName : '${abbrs.userAssignedIdentities}-${resourceToken}'
     location: location
     tags: tags
   }
@@ -142,7 +142,7 @@ module database 'core/database/database.bicep' = {
   }
 }
 
-module functionApp 'core/function-app.bicep' = {
+module functionApp 'core/app/function-app.bicep' = {
   name: 'functionApp'
   scope: resourceGroup
   params: {
@@ -153,7 +153,7 @@ module functionApp 'core/function-app.bicep' = {
   }
 }
 
-// module languageService 'core/language-service.bicep' = {
+// module languageService 'core/app/language-service.bicep' = {
 //   name: 'languageService'
 //   scope: resourceGroup
 //   params: {

@@ -35,6 +35,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
+      linuxFxVersion: 'DOTNET|8.0' // Configures the .NET 8 runtime
       appSettings: [
         {
           name: 'AzureWebJobsStorage'

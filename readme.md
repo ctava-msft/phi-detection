@@ -5,6 +5,11 @@ to visualize the setup:
 
 ![Project Diagram](./images/diagram.png)
 
+# Infra Pre-requisites
+
+- on a windows machine
+- have AZD installed
+
 # Infra Setup
 
 Deploy infra using the following commands:

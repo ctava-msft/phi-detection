@@ -27,7 +27,7 @@
       "value": "${AZURE_PRINCIPAL_ID}"
     },
     "publicNetworkAccess": {
-      "value": "${AZURE_PUBLIC_NETWORK_ACCESS}"
+      "value": "${AZURE_PUBLIC_NETWORK_ACCESS=Enabled}"
     },
     "storageAccountName": {
       "value": "${AZURE_STORAGE_ACCOUNT}"

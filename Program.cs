@@ -1,26 +1,30 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Azure.Functions.Worker.Extensions.Timer;
+using Microsoft.Azure.Functions.Worker.Extensions.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-[assembly: FunctionsStartup(typeof(MyFunctionApp.Startup))]
-
 namespace MyFunctionApp
 {
-    public class Startup : FunctionsStartup
+    public class Program
     {
-        public override void Configure(IFunctionsHostBuilder builder)
+        public static void Main(string[] args)
         {
-            builder.Services.AddHealthChecks();
+            var host = new HostBuilder()
+                 // For the isolated worker model
+                .ConfigureFunctionsWorkerDefaults()
+                .ConfigureServices(services =>
+                {
+                    services.AddHealthChecks();
+                })
+                .Build();
+
+            host.Run();
         }
     }
 
@@ -33,12 +37,15 @@ namespace MyFunctionApp
             _logger = logger;
         }
 
-        [FunctionName("HealthCheck")]
-        public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/health")] HttpRequest req)
+        [Function("HealthCheck")]
+        public HttpResponseData Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/health")]
+            HttpRequestData req)
         {
             _logger.LogInformation("Health check endpoint hit.");
-            return new OkObjectResult("Healthy");
+            var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+            response.WriteString("Healthy");
+            return response;
         }
     }
 
@@ -51,39 +58,12 @@ namespace MyFunctionApp
             _logger = logger;
         }
 
-        [FunctionName("TimerTriggerFunction")]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
+        [Function("TimerTriggerFunction")]
+        public Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"Timer trigger function executed at: {DateTime.Now}");
             // Add your logic here
-            await Task.CompletedTask;
-        }
-    }
-
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            var host = new HostBuilder()
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.ConfigureServices(services =>
-                    {
-                        services.AddHealthChecks();
-                    });
-
-                    webBuilder.Configure(app =>
-                    {
-                        app.UseRouting();
-                        app.UseEndpoints(endpoints =>
-                        {
-                            endpoints.MapHealthChecks("/api/health");
-                        });
-                    });
-                })
-                .Build();
-
-            host.Run();
+            return Task.CompletedTask;
         }
     }
 }

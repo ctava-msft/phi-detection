@@ -5,5 +5,5 @@
   "insightsComponents": "appi",
   "operationalInsightsWorkspaces": "log",
   "storageStorageAccounts": "st",
-  "userAssignedIdentity": "ua-id"
+  "userAssignedIdentities": "ua-id"
 }
