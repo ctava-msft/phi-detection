@@ -21,14 +21,20 @@ $projectPath = "./Project.csproj"
 # Build the project
 dotnet build $projectPath --configuration Release
 
+# Create publish directory if it does not exist
+$publishDir = "./publish"
+if (-Not (Test-Path -Path $publishDir)) {
+    New-Item -ItemType Directory -Path $publishDir
+}
+
 # Publish the project
-dotnet publish $projectPath --configuration Release --output ./publish
-Compress-Archive -Path ./publish/* -DestinationPath ./publish.zip -Force
+dotnet publish $projectPath --configuration Release --output $publishDir
+Compress-Archive -Path "$publishDir/*" -DestinationPath ./publish.zip -Force
 
 # Deploy to Azure Function App
 az functionapp deployment source config-zip `
     --resource-group $resourceGroupName `
     --name $functionAppName `
     --src ./publish.zip
-Remove-Item -Recurse -Force ./publish
+Remove-Item -Recurse -Force $publishDir
 ## FunctionApp Deployment - End

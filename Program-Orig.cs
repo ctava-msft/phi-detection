@@ -186,23 +186,38 @@ public class PhiDetectionFunction
 
     }
 
-    public void ConfigureServices(IServiceCollection services)
-    {
-        services.AddHealthChecks();
-    }
+    /// <summary>
+    /// Model class that represents a PHI record.
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
+    public record PHIRecord
+    {   
+        public string id { get; set; }
+        public string Subscription { get; set; }
+        public string ResourceGroup { get; set; }
+        public string StorageAreaName { get; set; }
+        public string StorageAreaContainer { get; set; }
+        public string FileName { get; set; }
+        public string Operation { get; set; } 
+        public string FieldName { get; set; } 
+        public string FieldType { get; set; }
 
-    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-    {
-        if (env.IsDevelopment())
+        public PHIRecord() { }
+
+        public PHIRecord(string subscription, string resourceGroup, string storageAreaName, string storageAreaContainer, string fileName, string operation, string fieldName, string fieldType)
         {
-            app.UseDeveloperExceptionPage();
+            id = Guid.NewGuid().ToString();
+            Subscription = subscription;
+            ResourceGroup = resourceGroup;
+            StorageAreaName = storageAreaName;
+            StorageAreaContainer = storageAreaContainer;
+            FileName = fileName;
+            Operation = operation;
+            FieldName = fieldName;
+            FieldType = fieldType;
         }
 
-        app.UseRouting();
-
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapHealthChecks("/health");
-        });
     }
+
 }

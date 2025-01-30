@@ -35,7 +35,7 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'DOTNET|8.0' // Configures the .NET 8 runtime
+      linuxFxVersion: 'DOTNET-ISOLATED|8.0'
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
@@ -50,8 +50,8 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
           value: '~4'
         }
         {
-          name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: '1'
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
         }
         {
           name: 'COSMOSDB_ENDPOINT'

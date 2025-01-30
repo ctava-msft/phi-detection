@@ -14,16 +14,31 @@ namespace MyFunctionApp
     {
         public static void Main(string[] args)
         {
-            var host = new HostBuilder()
-                 // For the isolated worker model
-                .ConfigureFunctionsWorkerDefaults()
-                .ConfigureServices(services =>
-                {
-                    services.AddHealthChecks();
-                })
-                .Build();
+            try
+            {
 
-            host.Run();
+                var host = new HostBuilder()
+                    .ConfigureFunctionsWorkerDefaults()
+                    .ConfigureLogging(logging =>
+                    {
+                        logging.AddConsole();
+                        logging.SetMinimumLevel(LogLevel.Debug);
+                    })
+                    .ConfigureServices(services =>
+                    {
+                        services.AddHealthChecks();
+                        //services.AddTimers();
+                    })
+                    .Build();
+
+                host.Run();
+            }
+            catch (Exception ex)
+            {
+                var logger = host.Services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "The listener for function 'Functions.TimerTriggerFunction' was unable to start.");
+                throw;
+            }
         }
     }
 
@@ -38,7 +53,7 @@ namespace MyFunctionApp
 
         [Function("HealthCheck")]
         public HttpResponseData Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/health")]
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")]
             HttpRequestData req)
         {
             _logger.LogInformation("Health check endpoint hit.");
@@ -58,11 +73,20 @@ namespace MyFunctionApp
         }
 
         [Function("TimerTriggerFunction")]
-        public Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
         {
-            _logger.LogInformation($"Timer trigger function executed at: {DateTime.Now}");
-            // Add your logic here
-            return Task.CompletedTask;
+            try
+            {
+                //_logger.LogInformation($"Timer trigger function executed at: {DateTime.Now}");
+                _logger.LogInformation($"Timer trigger function executed at: {myTimer.ScheduleStatus.Last}");
+                // Add your logic here
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while executing the timer trigger function.");
+                throw;
+            }
         }
     }
 }
