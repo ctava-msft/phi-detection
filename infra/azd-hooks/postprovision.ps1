@@ -31,10 +31,14 @@ if (-Not (Test-Path -Path $publishDir)) {
 dotnet publish $projectPath --configuration Release --output $publishDir
 Compress-Archive -Path "$publishDir/*" -DestinationPath ./publish.zip -Force
 
-# Deploy to Azure Function App
-az functionapp deployment source config-zip `
-    --resource-group $resourceGroupName `
-    --name $functionAppName `
-    --src ./publish.zip
+# Check if publish.zip exists and remove it if it does
+if (Test-Path -Path "./publish.zip") {
+    # Deploy to Azure Function App
+    az functionapp deployment source config-zip `
+        --resource-group $resourceGroupName `
+        --name $functionAppName `
+        --src ./publish.zip
+}
+
 Remove-Item -Recurse -Force $publishDir
 ## FunctionApp Deployment - End

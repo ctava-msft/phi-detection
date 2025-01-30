@@ -164,6 +164,25 @@ module functionApp 'core/app/function-app.bicep' = {
 //   }
 // }
 
+// Managed Identity Grants
+
+// Contributor Grant
+module contributorRoleUser 'core/security/role.bicep' = {
+  scope: resourceGroup
+  name: 'contributor-role-user'
+  params: {
+    principalId: principalId
+    roleDefinitionId: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    principalType: principalType
+  }
+}
+
+// Language Service Grant
+
+// Storage Account Grant
+
+
+
 // Database outputs
 output AZURE_COSMOS_DB_ENDPOINT string = database.outputs.endpoint
 output AZURE_COSMOS_DB_DATABASE_NAME string = database.outputs.database.name
