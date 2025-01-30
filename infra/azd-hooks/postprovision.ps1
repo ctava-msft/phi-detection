@@ -30,4 +30,5 @@ az functionapp deployment source config-zip `
     --resource-group $resourceGroupName `
     --name $functionAppName `
     --src ./publish.zip
+Remove-Item -Recurse -Force ./publish
 ## FunctionApp Deployment - End
