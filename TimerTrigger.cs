@@ -4,7 +4,8 @@ using Azure.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
-//using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
+using System.Text.Json;
 
 namespace MSFT.Function
 {
@@ -13,15 +14,15 @@ namespace MSFT.Function
         private readonly ILogger _logger;
         private DateTime tokenExpiryTime;
         private DefaultAzureCredential credentials;
-        //private BlobServiceClient blobClient;
-
+        private BlobServiceClient _blobClient;
+        private Dictionary<string, DateTime> _blobLastAccessTimes = new();
         private CosmosClient cosmosClient;
-
         public TimerTrigger(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger<TimerTrigger>();
             string cosmosEndpoint = Environment.GetEnvironmentVariable("COSMOSDB_ENDPOINT")!;
-            //string blobEndpoint = Environment.GetEnvironmentVariable("BLOB_STORAGE_ENDPOINT")!;
+            string storageAccountName = Environment.GetEnvironmentVariable("STORAGE_ACCOUNT_NAME")!;
+            string storageUri = $"https://{storageAccountName}.blob.core.windows.net";
             try
             {
                 var options = new DefaultAzureCredentialOptions
@@ -35,12 +36,17 @@ namespace MSFT.Function
                     ConsistencyLevel = ConsistencyLevel.Session,
                     ApplicationName = "YourAppName"
                 });
-                //blobClient = new BlobServiceClient(new Uri(blobEndpoint), credentials);
+                _blobClient = new BlobServiceClient(new Uri(storageUri), credentials);
                 tokenExpiryTime = DateTime.UtcNow.AddMinutes(55);
             }
             catch (Azure.Identity.AuthenticationFailedException ex)
             {
                 _logger.LogError(ex, "ManagedIdentityCredential authentication failed. Check Managed Identity configuration.");
+                throw;
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 403)
+            {
+                _logger.LogError(ex, "Authorization failed: Ensure Managed Identity has the correct permissions.");
                 throw;
             }
         }
@@ -49,13 +55,10 @@ namespace MSFT.Function
         public async Task Run([TimerTrigger("* * * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
-
             // Load Endpoints from config file
             string cosmosEndpoint = Environment.GetEnvironmentVariable("COSMOSDB_ENDPOINT")!;
-
             // Load Cosmos DB name from config file
             string cosmosDatabaseName = Environment.GetEnvironmentVariable("COSMOSDB_DBNAME")!;
-
             // Refresh credentials and CosmosClient if token is about to expire
             if (DateTime.UtcNow >= tokenExpiryTime)
             {
@@ -76,7 +79,6 @@ namespace MSFT.Function
                     throw;
                 }
             }
-
             // Ensure the Cosmos DB database exists
             var cosmosDatabase = await cosmosClient.CreateDatabaseIfNotExistsAsync(cosmosDatabaseName).ConfigureAwait(false);            
             // Define the custom indexing policy
@@ -85,7 +87,6 @@ namespace MSFT.Function
                 IndexingMode = Microsoft.Azure.Cosmos.IndexingMode.Consistent,
                 Automatic = true
             };
-
             // Add included paths
             indexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/" });
             indexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/Subscription/?" });
@@ -99,7 +100,7 @@ namespace MSFT.Function
             indexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/_etag/?" });
 
             // Create container properties with the custom indexing policy
-            var containerProperties = new ContainerProperties("phirecords-v1", "/id")
+            var containerProperties = new ContainerProperties("phirecords-v2", "/id")
             {
                 IndexingPolicy = indexingPolicy
             };
@@ -109,48 +110,88 @@ namespace MSFT.Function
             var container = containerResponse.Container;
             _logger.LogInformation($"*** Container: {container}");
 
+
+            // Retrieve STORAGE_CONTAINER_NAME from environment variables.
+            string containerName = Environment.GetEnvironmentVariable("STORAGE_CONTAINER_NAME")!;
+            var containerClient = _blobClient.GetBlobContainerClient(containerName);
+
             // Retrieve LANGUAGE_ENDPOINT and LANGUAGE_KEY from environment variables.
             string languageEndpoint = Environment.GetEnvironmentVariable("LANGUAGE_ENDPOINT")!;
             string languageKey = Environment.GetEnvironmentVariable("LANGUAGE_KEY")!;
 
-            // Call the language endpoint
-            using (var httpClient = new HttpClient())
+            await foreach (var blobItem in containerClient.GetBlobsAsync())
             {
-                httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", languageKey);
-                string payloadJson = File.ReadAllText("lang.json");
-                var content = new StringContent(
-                    payloadJson,
-                    System.Text.Encoding.UTF8,
-                    "application/json"
-                );
-                var languageResponse = await httpClient.PostAsync(
-                    $"{languageEndpoint}/language/:analyze-text?api-version=2022-05-01",
-                    content
-                );
-                if (!languageResponse.IsSuccessStatusCode)
+                if (!_blobLastAccessTimes.TryGetValue(blobItem.Name, out DateTime lastAccessTime)
+                    || (blobItem.Properties.LastModified?.UtcDateTime > lastAccessTime))
                 {
-                    _logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
-                } else {
-                    // Get the response content
-                    var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
-                    _logger.LogInformation($"Language response: {languageResponseContent}"); 
-                    var doc = System.Text.Json.JsonDocument.Parse(languageResponseContent);
-                    var entities = new List<PHIRecord>();
-                    foreach (var docElement in doc.RootElement
-                        .GetProperty("results")
-                        .GetProperty("documents")
-                        .EnumerateArray())
+
+                    DateTime blobLastAccessTime = DateTime.UtcNow;
+                    _blobLastAccessTimes[blobItem.Name] = blobLastAccessTime;
+                    var blobClient = containerClient.GetBlobClient(blobItem.Name);
+                    using var stream = new MemoryStream();
+                    await blobClient.DownloadToAsync(stream);
+                    stream.Position = 0;
+                    
+                    // Call the language endpoint
+                    using (var httpClient = new HttpClient())
                     {
-                        foreach (var entity in docElement.GetProperty("entities").EnumerateArray())
+                        httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", languageKey);
+                        string payloadJson = File.ReadAllText("lang.json");
+                        stream.Position = 0;
+                        var textFromStream = "";
+                        using (var sr = new StreamReader(stream))
                         {
-                            // string text = entity.GetProperty("text").GetString();
-                            string category = entity.GetProperty("category").GetString() ?? string.Empty;
-                            // Create a PHIRecord with category
-                            var record = new PHIRecord("LanguageSubscription", "LanguageRG", "LanguageStorage", "Container", "FromLanguage", "insert", category, category);
-                            entities.Add(record);
+                            textFromStream = sr.ReadToEnd();
+                        }
+
+                        // Overwrite payloadJson with blob text
+                        var payloadObj = JsonSerializer.Deserialize<Dictionary<string, object>>(payloadJson);
+                        if (payloadObj == null)
+                        {
+                            _logger.LogError("Deserialization of payloadJson returned null.");
+                            return;
+                        }
+                        var analysisInput = payloadObj["analysisInput"] as Dictionary<string, object>;
+                        var documents = analysisInput["documents"] as List<object>;
+                        var firstDoc = documents[0] as Dictionary<string, object>;
+                        firstDoc["text"] = textFromStream;
+                        payloadJson = JsonSerializer.Serialize(payloadObj);
+
+                        var content = new StringContent(
+                            payloadJson,
+                            System.Text.Encoding.UTF8,
+                            "application/json"
+                        );
+                        var languageResponse = await httpClient.PostAsync(
+                            $"{languageEndpoint}/language/:analyze-text?api-version=2022-05-01",
+                            content
+                        );
+                        if (!languageResponse.IsSuccessStatusCode)
+                        {
+                            _logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
+                        } else {
+                            // Get the response content
+                            var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
+                            _logger.LogInformation($"Language response: {languageResponseContent}"); 
+                            var doc = System.Text.Json.JsonDocument.Parse(languageResponseContent);
+                            var entities = new List<PHIRecord>();
+                            foreach (var docElement in doc.RootElement
+                                .GetProperty("results")
+                                .GetProperty("documents")
+                                .EnumerateArray())
+                            {
+                                foreach (var entity in docElement.GetProperty("entities").EnumerateArray())
+                                {
+                                    // string text = entity.GetProperty("text").GetString();
+                                    string category = entity.GetProperty("category").GetString() ?? string.Empty;
+                                    // Create a PHIRecord with category
+                                    var record = new PHIRecord("LanguageSubscription", "LanguageRG", "LanguageStorage", "Container", "FromLanguage", "insert", category, category, blobLastAccessTime);
+                                    entities.Add(record);
+                                }
+                            }
+                            await Task.WhenAll(entities.Select(e => container.UpsertItemAsync(e)));
                         }
                     }
-                    await Task.WhenAll(entities.Select(e => container.UpsertItemAsync(e)));
                 }
             }
 
@@ -177,10 +218,10 @@ namespace MSFT.Function
         public string Operation { get; set; } 
         public string FieldName { get; set; } 
         public string FieldType { get; set; }
+        public DateTime? BlobLastAccessTime { get; set; }
 
         public PHIRecord() { }
-
-        public PHIRecord(string subscription, string resourceGroup, string storageAreaName, string storageAreaContainer, string fileName, string operation, string fieldName, string fieldType)
+        public PHIRecord(string subscription, string resourceGroup, string storageAreaName, string storageAreaContainer, string fileName, string operation, string fieldName, string fieldType, DateTime blobLastAccessTime)
         {
             id = Guid.NewGuid().ToString();
             Subscription = subscription;
@@ -191,8 +232,8 @@ namespace MSFT.Function
             Operation = operation;
             FieldName = fieldName;
             FieldType = fieldType;
+            BlobLastAccessTime = blobLastAccessTime;
         }
-
     }
 
 }

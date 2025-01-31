@@ -177,10 +177,28 @@ module contributorRoleUser 'core/security/role.bicep' = {
   }
 }
 
+// Blob Data Contributor Grant
+module blobContributorRoleUser 'core/security/role.bicep' = {
+  scope: resourceGroup
+  name: 'blobContributor-role-user'
+  params: {
+    principalId: principalId
+    roleDefinitionId: '6648690f-0f37-4652-b6ae-68c5995dc409'
+    principalType: principalType
+  }
+}
+
+module blobReaderRoleFunctionApp 'core/security/role.bicep' = {
+  scope: resourceGroup
+  name: 'blobReaderRoleFunctionApp'
+  params: {
+    principalId: identity.outputs.principalId
+    roleDefinitionId: '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1' // Storage Blob Data Reader
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // Language Service Grant
-
-// Storage Account Grant
-
 
 
 // Database outputs
