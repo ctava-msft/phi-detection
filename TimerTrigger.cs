@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Azure.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Cosmos;
@@ -45,7 +46,7 @@ namespace MSFT.Function
         }
 
         [Function("TimerTrigger")]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("* * * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -108,6 +109,50 @@ namespace MSFT.Function
             var container = containerResponse.Container;
             _logger.LogInformation($"*** Container: {container}");
 
+            // Retrieve LANGUAGE_ENDPOINT and LANGUAGE_KEY from environment variables.
+            string languageEndpoint = Environment.GetEnvironmentVariable("LANGUAGE_ENDPOINT")!;
+            string languageKey = Environment.GetEnvironmentVariable("LANGUAGE_KEY")!;
+
+            // Call the language endpoint
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", languageKey);
+                string payloadJson = File.ReadAllText("lang.json");
+                var content = new StringContent(
+                    payloadJson,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+                var languageResponse = await httpClient.PostAsync(
+                    $"{languageEndpoint}/language/:analyze-text?api-version=2022-05-01",
+                    content
+                );
+                if (!languageResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"Failed to call language endpoint: {languageResponse.StatusCode}");
+                } else {
+                    // Get the response content
+                    var languageResponseContent = await languageResponse.Content.ReadAsStringAsync();
+                    _logger.LogInformation($"Language response: {languageResponseContent}"); 
+                    var doc = System.Text.Json.JsonDocument.Parse(languageResponseContent);
+                    var entities = new List<PHIRecord>();
+                    foreach (var docElement in doc.RootElement
+                        .GetProperty("results")
+                        .GetProperty("documents")
+                        .EnumerateArray())
+                    {
+                        foreach (var entity in docElement.GetProperty("entities").EnumerateArray())
+                        {
+                            // string text = entity.GetProperty("text").GetString();
+                            string category = entity.GetProperty("category").GetString() ?? string.Empty;
+                            // Create a PHIRecord with category
+                            var record = new PHIRecord("LanguageSubscription", "LanguageRG", "LanguageStorage", "Container", "FromLanguage", "insert", category, category);
+                            entities.Add(record);
+                        }
+                    }
+                    await Task.WhenAll(entities.Select(e => container.UpsertItemAsync(e)));
+                }
+            }
 
             if (myTimer.ScheduleStatus is not null)
             {
@@ -115,4 +160,39 @@ namespace MSFT.Function
             }
         }
     }
+
+    /// <summary>
+    /// Model class that represents a PHI record.
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
+    public record PHIRecord
+    {   
+        public string id { get; set; }
+        public string Subscription { get; set; }
+        public string ResourceGroup { get; set; }
+        public string StorageAreaName { get; set; }
+        public string StorageAreaContainer { get; set; }
+        public string FileName { get; set; }
+        public string Operation { get; set; } 
+        public string FieldName { get; set; } 
+        public string FieldType { get; set; }
+
+        public PHIRecord() { }
+
+        public PHIRecord(string subscription, string resourceGroup, string storageAreaName, string storageAreaContainer, string fileName, string operation, string fieldName, string fieldType)
+        {
+            id = Guid.NewGuid().ToString();
+            Subscription = subscription;
+            ResourceGroup = resourceGroup;
+            StorageAreaName = storageAreaName;
+            StorageAreaContainer = storageAreaContainer;
+            FileName = fileName;
+            Operation = operation;
+            FieldName = fieldName;
+            FieldType = fieldType;
+        }
+
+    }
+
 }
