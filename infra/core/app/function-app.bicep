@@ -43,6 +43,14 @@ resource functionApp 'Microsoft.Web/sites@2020-12-01' = {
           //value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccountId, '2021-04-01').keys[0].value}'
         }
         {
+          name: 'STORAGE_ACCOUNT_NAME'
+          value: 'sttqzqvek3clzau'
+        }
+        {
+          name: 'STORAGE_CONTAINER_NAME'
+          value: 'content'
+        }
+        {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'dotnet-isolated'
         }
